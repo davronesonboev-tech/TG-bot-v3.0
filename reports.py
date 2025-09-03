@@ -125,15 +125,16 @@ class ReportGenerator:
         # Подготавливаем данные
         gantt_data = []
         for task in valid_tasks:
-            start_date = datetime.fromisoformat(task['created_at'].replace('Z', '+00:00'))
-            deadline = datetime.fromisoformat(task['deadline'].replace('Z', '+00:00'))
-            
+            # Даты уже являются datetime объектами из базы данных
+            start_date = task['created_at']
+            deadline = task['deadline']
+
             # Если задача выполнена, используем дату выполнения
             if task['completed_at']:
-                end_date = datetime.fromisoformat(task['completed_at'].replace('Z', '+00:00'))
+                end_date = task['completed_at']
             else:
                 end_date = min(deadline, get_current_tashkent_time())
-            
+
             gantt_data.append({
                 'task': task['title'][:30] + ('...' if len(task['title']) > 30 else ''),
                 'start': start_date,
@@ -166,19 +167,25 @@ class ReportGenerator:
             end = task_data['end']
             deadline = task_data['deadline']
             status = task_data['status']
-            
+
             # Основная полоса задачи (используем реальную длительность в днях/часах)
             duration = (end - start).total_seconds() / (24*3600)
             color = status_colors.get(status, '#808080')
-            bar = ax.barh(i, duration, left=start, height=0.5,
-                          color=color, alpha=0.9, edgecolor='black', linewidth=0.6)
+
+            # Преобразуем datetime в числовое значение для matplotlib
+            start_num = mdates.date2num(start)
+
+            bar = ax.barh(i, duration, left=start_num, height=0.5,
+                          color=color, alpha=0.9, edgecolor='black', linewidth=1)
             
             # Отмечаем дедлайн вертикальной линией
-            ax.axvline(x=deadline, ymin=(i-0.35)/len(gantt_data), ymax=(i+0.35)/len(gantt_data), 
-                      color='red', linewidth=2.2, alpha=0.85)
+            deadline_num = mdates.date2num(deadline)
+            ax.axvline(x=deadline_num, ymin=(i-0.35)/len(gantt_data), ymax=(i+0.35)/len(gantt_data),
+                      color='red', linewidth=2, alpha=0.85)
             
             # Добавляем текст с именем исполнителя
-            ax.text(start + timedelta(days=duration/2), i, task_data['assignee'], 
+            text_x = mdates.date2num(start + timedelta(days=duration/2))
+            ax.text(text_x, i, task_data['assignee'],
                    ha='center', va='center', fontsize=9, fontweight='bold')
         
         # Настраиваем оси
