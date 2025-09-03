@@ -154,8 +154,8 @@ class ReportGenerator:
         # Сортируем по дедлайну
         gantt_data.sort(key=lambda x: x['deadline'])
 
-            # Создаём диаграмму с оптимизированными размерами
-    fig, ax = plt.subplots(figsize=(12, max(5, len(gantt_data) * 0.7)))
+        # Создаём диаграмму с оптимизированными размерами
+        fig, ax = plt.subplots(figsize=(12, max(5, len(gantt_data) * 0.7)))
 
         # Цвета для статусов
         colors = {
@@ -183,9 +183,9 @@ class ReportGenerator:
             end_num = mdates.date2num(end)
             deadline_num = mdates.date2num(deadline)
 
-                    # Основная полоса задачи с оптимизированной высотой
-        ax.barh(i, duration, left=start_num, height=0.8,
-                color=color, alpha=0.8, edgecolor='black', linewidth=1)
+            # Основная полоса задачи с оптимизированной высотой
+            ax.barh(i, duration, left=start_num, height=0.8,
+                    color=color, alpha=0.8, edgecolor='black', linewidth=1)
 
             # Дедлайн линия с оптимизированными пропорциями
             if task_data['is_overdue']:
@@ -212,10 +212,10 @@ class ReportGenerator:
         # Поворачиваем подписи дат
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-            # Заголовок и подписи с уменьшенными отступами
-    ax.set_title('Диаграмма Ганта', fontsize=16, fontweight='bold', pad=10)
-    ax.set_xlabel('Время', fontsize=11, labelpad=5)
-    ax.set_ylabel('Задачи', fontsize=11, labelpad=5)
+        # Заголовок и подписи с уменьшенными отступами
+        ax.set_title('Диаграмма Ганта', fontsize=16, fontweight='bold', pad=10)
+        ax.set_xlabel('Время', fontsize=11, labelpad=5)
+        ax.set_ylabel('Задачи', fontsize=11, labelpad=5)
 
         # Легенда
         legend_elements = [
