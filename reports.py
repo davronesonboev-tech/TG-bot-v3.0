@@ -110,8 +110,8 @@ class ReportGenerator:
         valid_tasks = [task for task in tasks if task['deadline']]
 
         if not valid_tasks:
-            # Создаём красивую пустую диаграмму
-            fig, ax = plt.subplots(figsize=(16, 8), facecolor='#f8f9fa')
+            # Создаём красивую пустую диаграмму (оптимизированную для Telegram)
+            fig, ax = plt.subplots(figsize=(12, 6), facecolor='#f8f9fa')
 
             # Градиентный фон
             gradient = plt.matplotlib.colors.LinearSegmentedColormap.from_list("", ["#667eea", "#764ba2"])
@@ -131,7 +131,8 @@ class ReportGenerator:
             ax.set_ylim(0, 1)
             ax.axis('off')
             plt.tight_layout()
-            plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='#f8f9fa')
+            # Оптимизируем для Telegram
+            plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='#f8f9fa')
             plt.close()
             return filepath
 
@@ -187,8 +188,12 @@ class ReportGenerator:
         # Сортируем по дедлайну (срочные задачи сверху)
         gantt_data.sort(key=lambda x: (x['is_overdue'], x['deadline']))
 
-        # Создаём премиум диаграмму
-        fig = plt.figure(figsize=(20, max(10, len(gantt_data) * 0.8)), facecolor='#ffffff')
+        # Создаём оптимизированную диаграмму для Telegram
+        # Ограничиваем размеры для предотвращения ошибки Photo_invalid_dimensions
+        max_width = min(16, max(12, len(gantt_data) * 0.5))  # Максимум 16 дюймов ширины
+        max_height = min(12, max(8, len(gantt_data) * 0.6))  # Максимум 12 дюймов высоты
+
+        fig = plt.figure(figsize=(max_width, max_height), facecolor='#ffffff')
         gs = fig.add_gridspec(1, 20, hspace=0, wspace=0)
         ax = fig.add_subplot(gs[0, :18])  # Основная диаграмма
         ax_info = fig.add_subplot(gs[0, 18:])  # Панель информации
@@ -391,7 +396,8 @@ class ReportGenerator:
                bbox=dict(boxstyle="round,pad=0.3", facecolor='#06b6d4', edgecolor='none'))
 
         plt.tight_layout()
-        plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='#ffffff')
+        # Оптимизируем для Telegram: уменьшаем DPI для меньшего размера файла
+        plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='#ffffff')
         plt.close()
 
         logger.info(f"Премиум диаграмма Ганта создана: {filepath}")
@@ -463,7 +469,8 @@ class ReportGenerator:
         plt.setp(ax4.xaxis.get_majorticklabels(), rotation=45)
         
         plt.tight_layout()
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        # Оптимизируем для Telegram
+        plt.savefig(filepath, dpi=150, bbox_inches='tight')
         plt.close()
         
         logger.info(f"График производительности создан: {filepath}")
@@ -505,7 +512,8 @@ class ReportGenerator:
             autotext.set_fontweight('bold')
         
         plt.tight_layout()
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        # Оптимизируем для Telegram
+        plt.savefig(filepath, dpi=150, bbox_inches='tight')
         plt.close()
         
         logger.info(f"Диаграмма распределения статусов создана: {filepath}")
@@ -626,7 +634,8 @@ class ReportGenerator:
         ax.set_ylim(0, 1)
         ax.axis('off')
         plt.tight_layout()
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        # Оптимизируем для Telegram
+        plt.savefig(filepath, dpi=150, bbox_inches='tight')
         plt.close()
         return filepath
 
