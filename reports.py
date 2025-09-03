@@ -91,7 +91,7 @@ class ReportGenerator:
     
     def create_gantt_chart(self, tasks: List[Dict], filename: str = None) -> str:
         """
-        Создание премиум диаграммы Ганта с улучшенным дизайном
+        Создание простой и понятной диаграммы Ганта
 
         Args:
             tasks: Список задач
@@ -110,33 +110,25 @@ class ReportGenerator:
         valid_tasks = [task for task in tasks if task['deadline']]
 
         if not valid_tasks:
-            # Создаём красивую пустую диаграмму (оптимизированную для Telegram)
-            fig, ax = plt.subplots(figsize=(12, 6), facecolor='#f8f9fa')
+            # Простая пустая диаграмма
+            fig, ax = plt.subplots(figsize=(10, 6))
 
-            # Градиентный фон
-            gradient = plt.matplotlib.colors.LinearSegmentedColormap.from_list("", ["#667eea", "#764ba2"])
-            ax.imshow([[0, 0], [1, 1]], extent=[0, 1, 0, 1], aspect='auto',
-                      cmap=gradient, alpha=0.1, transform=ax.transAxes)
-
-            # Иконка и текст
-            ax.text(0.5, 0.6, '📊', ha='center', va='center', fontsize=64, transform=ax.transAxes)
-            ax.text(0.5, 0.45, 'Диаграмма Ганта', ha='center', va='center',
-                   fontsize=28, fontweight='bold', color='#2c3e50', transform=ax.transAxes)
-            ax.text(0.5, 0.35, 'Нет задач с дедлайнами для отображения',
-                   ha='center', va='center', fontsize=16, color='#7f8c8d', transform=ax.transAxes)
-            ax.text(0.5, 0.25, 'Создайте задачи с дедлайнами, чтобы увидеть график',
-                   ha='center', va='center', fontsize=14, color='#95a5a6', transform=ax.transAxes)
+            ax.text(0.5, 0.6, 'Диаграмма Ганта', ha='center', va='center',
+                   fontsize=24, fontweight='bold', color='#333333', transform=ax.transAxes)
+            ax.text(0.5, 0.4, 'Нет задач с дедлайнами',
+                   ha='center', va='center', fontsize=14, color='#666666', transform=ax.transAxes)
+            ax.text(0.5, 0.3, 'Создайте задачи с дедлайнами для отображения',
+                   ha='center', va='center', fontsize=12, color='#888888', transform=ax.transAxes)
 
             ax.set_xlim(0, 1)
             ax.set_ylim(0, 1)
             ax.axis('off')
             plt.tight_layout()
-            # Оптимизируем для Telegram
-            plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='#f8f9fa')
+            plt.savefig(filepath, dpi=150, bbox_inches='tight')
             plt.close()
             return filepath
 
-        # Подготавливаем данные с дополнительными метриками
+        # Подготавливаем данные
         gantt_data = []
         current_time = get_current_tashkent_time()
 
@@ -144,263 +136,117 @@ class ReportGenerator:
             start_date = task['created_at']
             deadline = task['deadline']
 
-            # Определяем конечную дату
             if task['completed_at']:
                 end_date = task['completed_at']
-                is_completed = True
             else:
                 end_date = min(deadline, current_time)
-                is_completed = task['status'] == 'completed'
-
-            # Вычисляем метрики
-            total_duration = (deadline - start_date).total_seconds() / (24*3600)
-            actual_duration = (end_date - start_date).total_seconds() / (24*3600)
-            progress = min(actual_duration / total_duration, 1.0) if total_duration > 0 else 0
-
-            # Определяем статус прогресса
-            if is_completed:
-                progress_status = 'completed'
-            elif end_date >= deadline:
-                progress_status = 'overdue'
-            elif progress > 0.7:
-                progress_status = 'at_risk'
-            else:
-                progress_status = 'on_track'
 
             gantt_data.append({
-                'id': task['id'],
-                'task': task['title'][:35] + ('...' if len(task['title']) > 35 else ''),
-                'full_title': task['title'],
+                'task': task['title'][:40] + ('...' if len(task['title']) > 40 else ''),
                 'start': start_date,
                 'end': end_date,
                 'deadline': deadline,
                 'status': task['status'],
-                'progress_status': progress_status,
                 'assignee': task['assignee_name'] or 'Не назначен',
-                'progress': progress,
-                'total_days': total_duration,
-                'actual_days': actual_duration,
-                'is_overdue': current_time > deadline and not is_completed,
-                'days_left': max(0, (deadline - current_time).days) if current_time < deadline else 0,
-                'priority': task.get('priority', 'medium')
+                'is_overdue': current_time > deadline and not task['completed_at']
             })
 
-        # Сортируем по дедлайну (срочные задачи сверху)
-        gantt_data.sort(key=lambda x: (x['is_overdue'], x['deadline']))
+        # Сортируем по дедлайну
+        gantt_data.sort(key=lambda x: x['deadline'])
 
-        # Создаём оптимизированную диаграмму для Telegram
-        # Ограничиваем размеры для предотвращения ошибки Photo_invalid_dimensions
-        max_width = min(16, max(12, len(gantt_data) * 0.5))  # Максимум 16 дюймов ширины
-        max_height = min(12, max(8, len(gantt_data) * 0.6))  # Максимум 12 дюймов высоты
+        # Создаём диаграмму
+        fig, ax = plt.subplots(figsize=(14, max(6, len(gantt_data) * 0.8)))
 
-        fig = plt.figure(figsize=(max_width, max_height), facecolor='#ffffff')
-        gs = fig.add_gridspec(1, 20, hspace=0, wspace=0)
-        ax = fig.add_subplot(gs[0, :18])  # Основная диаграмма
-        ax_info = fig.add_subplot(gs[0, 18:])  # Панель информации
-
-        # Премиум стиль
-        plt.style.use('default')
-        ax.set_facecolor('#ffffff')
-        ax_info.set_facecolor('#f8f9fa')
-
-        # Улучшенная цветовая палитра
-        status_colors = {
-            'new': '#6366f1',          # Indigo
-            'in_progress': '#3b82f6',   # Blue
-            'completed': '#10b981',     # Emerald
-            'overdue': '#ef4444',       # Red
-            'cancelled': '#6b7280',     # Gray
-            'at_risk': '#f59e0b',       # Amber
-            'on_track': '#06b6d4'       # Cyan
+        # Цвета для статусов
+        colors = {
+            'new': '#3498db',        # Синий
+            'in_progress': '#f39c12', # Оранжевый
+            'completed': '#27ae60',   # Зелёный
+            'overdue': '#e74c3c',     # Красный
+            'cancelled': '#95a5a6'    # Серый
         }
-
-        # Градиентные цвета для полос задач
-        def get_gradient_color(status, progress):
-            base_color = status_colors.get(status, '#6b7280')
-            if progress < 0.3:
-                return base_color
-            elif progress < 0.7:
-                return base_color  # Можно добавить градиент
-            else:
-                return base_color
 
         y_pos = range(len(gantt_data))
 
-        # Рисуем полосы задач с эффектами
+        # Рисуем полосы задач
         for i, task_data in enumerate(gantt_data):
             start = task_data['start']
             end = task_data['end']
             deadline = task_data['deadline']
             status = task_data['status']
-            progress = task_data['progress']
-            progress_status = task_data['progress_status']
 
             duration = (end - start).total_seconds() / (24*3600)
-            color = get_gradient_color(progress_status, progress)
+            color = colors.get(status, '#95a5a6')
 
             # Преобразуем datetime в числовое значение
             start_num = mdates.date2num(start)
             end_num = mdates.date2num(end)
             deadline_num = mdates.date2num(deadline)
 
-            # Основная полоса задачи с градиентом
-            bar = ax.barh(i, duration, left=start_num, height=0.7,
-                          color=color, alpha=0.9, edgecolor='white', linewidth=2)
+            # Основная полоса задачи
+            ax.barh(i, duration, left=start_num, height=0.6,
+                    color=color, alpha=0.8, edgecolor='black', linewidth=1)
 
-            # Добавляем тень для 3D эффекта
-            ax.barh(i, duration, left=start_num, height=0.7,
-                    color='black', alpha=0.1, edgecolor='none', linewidth=0,
-                    zorder=-1)
-
-            # Прогресс-индикатор
-            if progress > 0:
-                progress_width = duration * progress
-                ax.barh(i, progress_width, left=start_num, height=0.5,
-                        color=color, alpha=1.0, edgecolor='none', linewidth=0)
-
-            # Дедлайн линия с иконкой
+            # Дедлайн линия
             if task_data['is_overdue']:
-                # Красная линия для просроченных
                 ax.axvline(x=deadline_num, ymin=(i-0.4)/len(gantt_data), ymax=(i+0.4)/len(gantt_data),
-                          color='#ef4444', linewidth=3, alpha=0.8, linestyle='--')
-                # Иконка предупреждения
-                ax.text(deadline_num, i + 0.3, '⚠️', ha='center', va='center',
-                       fontsize=12, fontweight='bold')
+                          color='red', linewidth=2, linestyle='--')
             else:
-                # Обычная дедлайн линия
                 ax.axvline(x=deadline_num, ymin=(i-0.4)/len(gantt_data), ymax=(i+0.4)/len(gantt_data),
-                          color='#f59e0b', linewidth=2, alpha=0.6, linestyle='-.')
+                          color='orange', linewidth=1.5, linestyle='-.')
 
-            # Иконка статуса
-            status_icons = {
-                'completed': '✅',
-                'in_progress': '🔄',
-                'new': '🆕',
-                'overdue': '⏰',
-                'cancelled': '❌'
-            }
-            icon = status_icons.get(status, '📋')
-            ax.text(start_num - 0.5, i, icon, ha='center', va='center', fontsize=14)
+            # Название задачи и исполнитель
+            task_label = f"{task_data['task']} - {task_data['assignee']}"
+            ax.text(start_num + duration + 0.2, i, task_label,
+                   ha='left', va='center', fontsize=9, fontweight='medium')
 
-            # Информация о задаче
-            task_text = f"{task_data['task']}\n{task_data['assignee']}"
-            ax.text(start_num + duration + 0.5, i, task_text,
-                   ha='left', va='center', fontsize=10, fontweight='medium',
-                   bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.9, edgecolor='none'))
-
-            # Прогресс бар для незавершенных задач
-            if not task_data.get('is_completed', False) and progress < 1:
-                # Мини-прогресс бар
-                bar_x = start_num + duration + 2
-                bar_width = 2
-                bar_height = 0.2
-
-                # Фон прогресс бара
-                ax.add_patch(plt.Rectangle((bar_x, i - bar_height/2), bar_width, bar_height,
-                                         facecolor='#e5e7eb', edgecolor='#d1d5db', linewidth=1))
-
-                # Заполненная часть
-                filled_width = bar_width * progress
-                if filled_width > 0:
-                    ax.add_patch(plt.Rectangle((bar_x, i - bar_height/2), filled_width, bar_height,
-                                             facecolor=color, edgecolor='none'))
-
-                # Процент
-                ax.text(bar_x + bar_width + 0.2, i, f"{progress:.0%}",
-                       ha='left', va='center', fontsize=9, fontweight='bold')
-
-        # Настраиваем основную ось
+        # Настраиваем оси
         ax.set_yticks(y_pos)
-        ax.set_yticklabels([f"{task['task']}\n{task['assignee']}" for task in gantt_data])
+        ax.set_yticklabels([f"{i+1}" for i in range(len(gantt_data))])
         ax.invert_yaxis()
 
         # Форматируем ось времени
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d.%m\n%H:%M'))
-        ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=6, maxticks=12))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d.%m %H:%M'))
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=6, maxticks=10))
 
         # Поворачиваем подписи дат
-        plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha='center')
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-        # Премиум заголовок
-        title_text = "🎯 Диаграмма Ганта - Управление Проектами"
-        ax.set_title(title_text, fontsize=24, fontweight='bold', pad=30,
-                    color='#1f2937', y=1.02)
+        # Заголовок и подписи
+        ax.set_title('Диаграмма Ганта', fontsize=18, fontweight='bold', pad=20)
+        ax.set_xlabel('Время', fontsize=12)
+        ax.set_ylabel('Задачи', fontsize=12)
 
-        # Подзаголовок с статистикой
-        total_tasks = len(gantt_data)
-        completed_tasks = len([t for t in gantt_data if t['status'] == 'completed'])
-        overdue_tasks = len([t for t in gantt_data if t['is_overdue']])
-
-        completion_rate = completed_tasks / max(total_tasks, 1) * 100
-        subtitle = ".1f"
-        ax.text(0.5, 0.98, subtitle, ha='center', va='top', fontsize=12,
-               color='#6b7280', transform=ax.transAxes, style='italic')
-
-        ax.set_xlabel('Временная шкала', fontsize=14, fontweight='medium', labelpad=20)
-        ax.set_ylabel('Задачи', fontsize=14, fontweight='medium', labelpad=20)
-
-        # Улучшенная легенда
+        # Легенда
         legend_elements = [
-            plt.Rectangle((0, 0), 1, 0.6, facecolor=status_colors['new'], label='Новая задача'),
-            plt.Rectangle((0, 0), 1, 0.6, facecolor=status_colors['in_progress'], label='В работе'),
-            plt.Rectangle((0, 0), 1, 0.6, facecolor=status_colors['completed'], label='Выполнена'),
-            plt.Rectangle((0, 0), 1, 0.6, facecolor=status_colors['overdue'], label='Просрочена'),
-            plt.Rectangle((0, 0), 1, 0.6, facecolor=status_colors['at_risk'], label='Под угрозой'),
-            plt.Line2D([0], [0], color='#f59e0b', linewidth=2, linestyle='-.', label='Дедлайн'),
-            plt.Line2D([0], [0], color='#ef4444', linewidth=3, linestyle='--', label='Просрочен')
+            plt.Rectangle((0, 0), 1, 0.5, facecolor=colors['new'], label='Новая'),
+            plt.Rectangle((0, 0), 1, 0.5, facecolor=colors['in_progress'], label='В работе'),
+            plt.Rectangle((0, 0), 1, 0.5, facecolor=colors['completed'], label='Выполнена'),
+            plt.Rectangle((0, 0), 1, 0.5, facecolor=colors['overdue'], label='Просрочена'),
+            plt.Line2D([0], [0], color='orange', linewidth=1.5, label='Дедлайн'),
+            plt.Line2D([0], [0], color='red', linewidth=2, linestyle='--', label='Просрочен')
         ]
+        ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.02, 1))
 
-        legend = ax.legend(handles=legend_elements, loc='upper left',
-                          bbox_to_anchor=(1.02, 1), frameon=True, fancybox=True,
-                          shadow=True, fontsize=10, title="Легенда", title_fontsize=12)
-        legend.get_frame().set_facecolor('#ffffff')
-        legend.get_frame().set_edgecolor('#e5e7eb')
-
-        # Премиум сетка
-        ax.grid(True, alpha=0.2, axis='x', linestyle='--', color='#d1d5db')
-        ax.grid(False, axis='y')
+        # Сетка
+        ax.grid(True, alpha=0.3, axis='x')
 
         # Убираем верхнюю и правую границы
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_linewidth(0.5)
-        ax.spines['bottom'].set_linewidth(0.5)
-
-        # Панель информации
-        ax_info.axis('off')
-
-        # Статистика проекта
-        stats_y = 0.95
-        ax_info.text(0.1, stats_y, "📊 Статистика проекта", fontsize=12, fontweight='bold',
-                    color='#1f2937', va='top')
-
-        stats = [
-            ("Всего задач", f"{total_tasks}"),
-            ("Выполнено", f"{completed_tasks} ({completed_tasks/max(total_tasks,1)*100:.0f}%)"),
-            ("Просрочено", f"{overdue_tasks} ({overdue_tasks/max(total_tasks,1)*100:.0f}%)"),
-            ("Активных", f"{total_tasks - completed_tasks - overdue_tasks}"),
-        ]
-
-        for i, (label, value) in enumerate(stats):
-            ax_info.text(0.1, stats_y - 0.1 - i*0.08, label, fontsize=10, color='#6b7280', va='top')
-            ax_info.text(0.8, stats_y - 0.1 - i*0.08, value, fontsize=10, fontweight='bold',
-                        color='#1f2937', va='top', ha='right')
 
         # Текущая дата линия
         current_time_num = mdates.date2num(current_time)
         ax.axvline(x=current_time_num, ymin=0, ymax=1,
-                  color='#06b6d4', linewidth=2, alpha=0.8, linestyle='-',
-                  label='Текущий момент')
-        ax.text(current_time_num, len(gantt_data) + 0.5, 'Сейчас',
-               ha='center', va='bottom', fontsize=10, fontweight='bold',
-               bbox=dict(boxstyle="round,pad=0.3", facecolor='#06b6d4', edgecolor='none'))
+                  color='blue', linewidth=1.5, alpha=0.7, linestyle=':')
+        ax.text(current_time_num, len(gantt_data) + 0.2, 'Сейчас',
+               ha='center', va='bottom', fontsize=9, fontweight='bold')
 
         plt.tight_layout()
-        # Оптимизируем для Telegram: уменьшаем DPI для меньшего размера файла
-        plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='#ffffff')
+        plt.savefig(filepath, dpi=150, bbox_inches='tight')
         plt.close()
 
-        logger.info(f"Премиум диаграмма Ганта создана: {filepath}")
+        logger.info(f"Диаграмма Ганта создана: {filepath}")
         return filepath
     
     def create_user_performance_chart(self, user_id: int = None, filename: str = None) -> str:
