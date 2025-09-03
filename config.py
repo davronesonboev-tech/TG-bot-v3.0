@@ -60,6 +60,9 @@ class BotConfig:
     def get_database_url(self) -> str:
         """Получение URL для подключения к базе данных"""
         if self.DATABASE_URL:
+            # Заменяем внутренний Railway hostname на external, если нужно
+            if "postgres.railway.internal" in self.DATABASE_URL:
+                logger.warning("Обнаружен внутренний Railway hostname. Возможно, нужно использовать external DATABASE_URL")
             return self.DATABASE_URL
 
         if self.DATABASE_TYPE.lower() == "postgresql":
