@@ -154,8 +154,8 @@ class ReportGenerator:
         # Сортируем по дедлайну
         gantt_data.sort(key=lambda x: x['deadline'])
 
-        # Создаём диаграмму
-        fig, ax = plt.subplots(figsize=(14, max(6, len(gantt_data) * 0.8)))
+            # Создаём диаграмму с оптимизированными размерами
+    fig, ax = plt.subplots(figsize=(12, max(5, len(gantt_data) * 0.7)))
 
         # Цвета для статусов
         colors = {
@@ -183,16 +183,16 @@ class ReportGenerator:
             end_num = mdates.date2num(end)
             deadline_num = mdates.date2num(deadline)
 
-            # Основная полоса задачи
-            ax.barh(i, duration, left=start_num, height=0.6,
-                    color=color, alpha=0.8, edgecolor='black', linewidth=1)
+                    # Основная полоса задачи с оптимизированной высотой
+        ax.barh(i, duration, left=start_num, height=0.8,
+                color=color, alpha=0.8, edgecolor='black', linewidth=1)
 
-            # Дедлайн линия
+            # Дедлайн линия с оптимизированными пропорциями
             if task_data['is_overdue']:
-                ax.axvline(x=deadline_num, ymin=(i-0.4)/len(gantt_data), ymax=(i+0.4)/len(gantt_data),
+                ax.axvline(x=deadline_num, ymin=(i-0.35)/len(gantt_data), ymax=(i+0.35)/len(gantt_data),
                           color='red', linewidth=2, linestyle='--')
             else:
-                ax.axvline(x=deadline_num, ymin=(i-0.4)/len(gantt_data), ymax=(i+0.4)/len(gantt_data),
+                ax.axvline(x=deadline_num, ymin=(i-0.35)/len(gantt_data), ymax=(i+0.35)/len(gantt_data),
                           color='orange', linewidth=1.5, linestyle='-.')
 
             # Название задачи и исполнитель
@@ -212,10 +212,10 @@ class ReportGenerator:
         # Поворачиваем подписи дат
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-        # Заголовок и подписи
-        ax.set_title('Диаграмма Ганта', fontsize=18, fontweight='bold', pad=20)
-        ax.set_xlabel('Время', fontsize=12)
-        ax.set_ylabel('Задачи', fontsize=12)
+            # Заголовок и подписи с уменьшенными отступами
+    ax.set_title('Диаграмма Ганта', fontsize=16, fontweight='bold', pad=10)
+    ax.set_xlabel('Время', fontsize=11, labelpad=5)
+    ax.set_ylabel('Задачи', fontsize=11, labelpad=5)
 
         # Легенда
         legend_elements = [
@@ -226,7 +226,8 @@ class ReportGenerator:
             plt.Line2D([0], [0], color='orange', linewidth=1.5, label='Дедлайн'),
             plt.Line2D([0], [0], color='red', linewidth=2, linestyle='--', label='Просрочен')
         ]
-        ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.02, 1))
+        ax.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 1.08),
+              ncol=3, fontsize=9, frameon=True, fancybox=True)
 
         # Сетка
         ax.grid(True, alpha=0.3, axis='x')
@@ -239,10 +240,14 @@ class ReportGenerator:
         current_time_num = mdates.date2num(current_time)
         ax.axvline(x=current_time_num, ymin=0, ymax=1,
                   color='blue', linewidth=1.5, alpha=0.7, linestyle=':')
-        ax.text(current_time_num, len(gantt_data) + 0.2, 'Сейчас',
-               ha='center', va='bottom', fontsize=9, fontweight='bold')
+        # Размещаем текст "Сейчас" внутри области диаграммы
+        ax.text(current_time_num, len(gantt_data) - 0.3, 'Сейчас',
+               ha='center', va='top', fontsize=9, fontweight='bold',
+               bbox=dict(boxstyle="round,pad=0.2", facecolor='white', alpha=0.8, edgecolor='none'))
 
+        # Оптимизируем пространство
         plt.tight_layout()
+        plt.subplots_adjust(top=0.85, bottom=0.15, left=0.1, right=0.95)
         plt.savefig(filepath, dpi=150, bbox_inches='tight')
         plt.close()
 
