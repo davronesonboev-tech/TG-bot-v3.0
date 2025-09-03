@@ -4,6 +4,7 @@
 """
 
 import os
+import logging
 from pathlib import Path
 try:
     from dotenv import load_dotenv
@@ -14,6 +15,8 @@ try:
 except Exception:
     # Не критично, если python-dotenv не установлен
     pass
+
+logger = logging.getLogger(__name__)
 from dataclasses import dataclass, field
 from typing import Dict, List
 
